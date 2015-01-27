@@ -18,7 +18,7 @@ class Robot:
         
         self.BUFLEN = 4096; self.idel = .01
         self.remote = (IP, PORT)
-        self.v = verbose
+	self.verbose = verbose
         self.connect()
         
         if toolfile == None: self.setTool(tool)
@@ -31,7 +31,7 @@ class Robot:
             self.setJoints()
 
     def connect(self):        
-        if verbose: print 'Attempting to connect to ABB robot at', self.remote
+        if self.verbose: print 'Attempting to connect to ABB robot at', self.remote
         self.robsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.robsock.connect(self.remote)
 
@@ -42,7 +42,7 @@ class Robot:
             msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
-            if self.v: print 'setCartesian:', msg
+            if self.verbose: print 'setCartesian:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             return data
@@ -54,7 +54,7 @@ class Robot:
             msg = "02 " 
             msg = msg + format(j[0], "+08.2f") + " " + format(j[1], "+08.2f") + " " + format(j[2], "+08.2f") + " " 
             msg = msg + format(j[3], "+08.2f") + " " + format(j[4], "+08.2f") + " " + format(j[5], "+08.2f") + " #" 
-            if self.v: print 'setJoints:', msg
+            if self.verbose: print 'setJoints:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)  
             return data
@@ -97,7 +97,7 @@ class Robot:
             msg = msg + format(tool[0][0], "+08.1f") + " " + format(tool[0][1], "+08.1f") + " " + format(tool[0][2], "+08.1f") + " " 
             msg = msg + format(tool[1][0], "+08.5f") + " " + format(tool[1][1], "+08.5f") + " " 
             msg = msg + format(tool[1][2], "+08.5f") + " " + format(tool[1][3], "+08.5f") + " #"    
-            if self.v: print 'setTool:', msg
+            if self.verbose: print 'setTool:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             self.tool = tool
@@ -127,7 +127,7 @@ class Robot:
             msg = msg + format(wobj[0][0], "+08.1f") + " " + format(wobj[0][1], "+08.1f") + " " + format(wobj[0][2], "+08.1f") + " " 
             msg = msg + format(wobj[1][0], "+08.5f") + " " + format(wobj[1][1], "+08.5f") + " " 
             msg = msg + format(wobj[1][2], "+08.5f") + " " + format(wobj[1][3], "+08.5f") + " #"    
-            if self.v: print 'setWorkObject:', msg
+            if self.verbose: print 'setWorkObject:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             time.sleep(self.idel)
@@ -143,7 +143,7 @@ class Robot:
             msg = msg + format(speed[2], "+08.1f") + " " + format(speed[3], "+08.2f") + " #"  
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
-            if self.v: print 'setSpeed:', msg 
+            if self.verbose: print 'setSpeed:', msg 
             time.sleep(self.idel)
             return data
         else: return False
@@ -174,7 +174,7 @@ class Robot:
         msg = msg + format(zone[0], "+08.4f") + " " + format(zone[1], "+08.4f") + " " + format(zone[2], "+08.4f") + " #" 
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
-        if self.v: print 'setZone:', msg
+        if self.verbose: print 'setZone:', msg
         time.sleep(self.idel)
         return data
 
@@ -187,7 +187,7 @@ class Robot:
             msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
-            if self.v: print 'addBuffer:', msg
+            if self.verbose: print 'addBuffer:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             time.sleep(self.idel)
@@ -230,7 +230,7 @@ class Robot:
             msg = "34 " 
             msg = msg + format(axisValues[0], "+08.2f") + " " + format(axisValues[1], "+08.2f") + " " + format(axisValues[2], "+08.2f") + " " 
             msg = msg + format(axisValues[3], "+08.2f") + " " + format(axisValues[4], "+08.2f") + " " + format(axisValues[5], "+08.2f") + " #" 
-            if self.v: print 'setExternalAxis:', msg
+            if self.verbose: print 'setExternalAxis:', msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)  
             return data
@@ -265,7 +265,7 @@ class Robot:
 	if len(joint_pos) == 6:
             msg = "37"
             msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
-            if self.v: print 'addJointBuffer:',msg
+            if self.verbose: print 'addJointBuffer:',msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             time.sleep(self.idel)
@@ -283,7 +283,7 @@ class Robot:
         msg = "39 #"
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
-        return int(floag(data[2]))
+        return int(float(data[2]))
 
     def executeJointPosBuffer(self):
         msg = "40 #"
@@ -296,7 +296,7 @@ class Robot:
             if (len(coords) == 2):
                 if ((len(coords[0]) == 3) & (len(coords[1]) == 4)): return True
         except: pass
-        if self.v: print 'Coordinate check failed on', coords
+        if self.verbose: print 'Coordinate check failed on', coords
         return False
 
     def close(self):

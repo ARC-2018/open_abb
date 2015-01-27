@@ -38,7 +38,7 @@ VAR num BUFFER_POS := 0;
 VAR num BUFFER_JOINT_POS :=0;
 VAR robtarget bufferTargets{MAX_BUFFER};
 VAR speeddata bufferSpeeds{MAX_BUFFER};
-VAR robjoint bufferJointPos{MAX_BUFFER};
+VAR jointtarget bufferJointPos{MAX_BUFFER};
 VAR speeddata bufferJointSpeeds{MAX_BUFFER};
 
 !//External axis position variables
@@ -437,7 +437,7 @@ PROC main()
 	    CASE 40: !Execute moves in bufferJointPos
 	        IF nParams = 0 THEN
 		    FOR i FROM 1 TO (BUFFER_JOINT_POS) DO
-		        MoveJ bufferJointPos{i} bufferJointSpeeds{i} currentZone, currentTool |Wobj:=currentWobj;
+		        MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
 		    ENDFOR
 		    ok :=SERVER_OK;
 		ELSE
