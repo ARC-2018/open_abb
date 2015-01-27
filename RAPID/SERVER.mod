@@ -35,8 +35,11 @@ VAR bool moveCompleted; !Set to true after finishing a Move instruction.
 !//Buffered move variables
 CONST num MAX_BUFFER := 512;
 VAR num BUFFER_POS := 0;
+VAR num BUFFER_JOINT_POS :=0;
 VAR robtarget bufferTargets{MAX_BUFFER};
 VAR speeddata bufferSpeeds{MAX_BUFFER};
+VAR robjoint bufferJointPos{MAX_BUFFER};
+VAR speeddata bufferJointSpeeds{MAX_BUFFER};
 
 !//External axis position variables
 VAR extjoint externalAxis;
@@ -400,7 +403,47 @@ PROC main()
                 ELSE
                     ok:=SERVER_BAD_MSG;
                 ENDIF
-				
+
+	    CASE 37: !Add Joint Positions to buffer
+	        IF nParams = 6 THEN
+		    jointsTarget :=[params{1},params{2},params{3},params{4},params{5},params{6}];
+		    IF BUFFER_JOINT_POS < MAX_BUFFER THEN
+		        BUFFER_JOINT_POS := BUFFER_JOINT_POS + 1;
+			bufferJointPos{BUFFER_JOINT_POS} :=jointsTarget;
+			bufferJointSpeeds{BUFFER_JOINT_POS} := currentSpeed;
+		    ENDIF
+		    ok := SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 38: !Clear Joint Position Buffer
+	        IF nParams = 0 THEN
+		    BUFFER_JOINT_POS := 0;
+		    ok :=SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 39: !Get Joint Position Buffer Size
+	        IF nParams = 0 THEN
+		    addString:= NumToStr(BUFFER_JOINT_POS,2);
+		    ok := SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF    
+
+	    
+	    CASE 40: !Execute moves in bufferJointPos
+	        IF nParams = 0 THEN
+		    FOR i FROM 1 TO (BUFFER_JOINT_POS) DO
+		        MoveJ bufferJointPos{i} bufferJointSpeeds{i} currentZone, currentTool |Wobj:=currentWobj;
+		    ENDFOR
+		    ok :=SERVER_OK;
+		ELSE
+           	    ok :=SERVER_BAD_MSG;
+		ENDIF
+
             CASE 98: !returns current robot info: serial number, robotware version, and robot type
                 IF nParams = 0 THEN
                     addString := GetSysInfo(\SerialNo) + "*";

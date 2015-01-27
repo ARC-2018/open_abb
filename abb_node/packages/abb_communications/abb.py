@@ -260,6 +260,37 @@ class Robot:
         else:
             return False
 
+    def addJointPosBuffer(self,joint_pos):
+	#appends single joint position to the buffer
+	if len(joint_pos) == 6:
+            msg = "37"
+            msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
+            if self.v: print 'addJointBuffer:',msg
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            time.sleep(self.idel)
+            return data
+        else:
+            return False
+
+    def clearJointPosBuffer(self):
+        msg = "38 #"
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        return data
+
+    def lenJointPosBuffer(self):
+        msg = "39 #"
+        self.robsock.send(msg)
+        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        return int(floag(data[2]))
+
+    def executeJointPosBuffer(self):
+        msg = "40 #"
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        return data
+
     def checkCoordinates(self, coords):
         try: 
             if (len(coords) == 2):
