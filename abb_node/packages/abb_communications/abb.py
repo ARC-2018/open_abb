@@ -326,13 +326,19 @@ class Robot:
             return False
 
     def clearJointPosTimeBuffer(self):
-        raise NotImplementedError('clearJointPosTimeBuffer not yet implemented in RAPID')
+        msg = "43 #"
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        return data
 
     def lenJointPosTimeBuffer(self):
-        raise NotImplementedError('lenJointPosTimeBuffer not yet implemented in RAPID')
-
+        msg = "44 #"
+        self.robsock.send(msg)
+        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        return int(float(data[2]))
+        
     def executeJointPosTimeBuffer(self):
-        msg = "43 #"
+        msg = "45 #"
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
         return data

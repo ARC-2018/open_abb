@@ -518,7 +518,23 @@ PROC main()
 		    ok := SERVER_BAD_MSG;
 		ENDIF
 
-	    CASE 43: !Execute moves in bufferJointTimePos using bufferJointTimes
+	    CASE 43: !Clear Joint Position Time Buffer
+	        IF nParams = 0 THEN
+		    BUFFER_JOINT_TIME_POS := 0;
+		    ok :=SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 44: !Get Joint Position Time Buffer Size
+	        IF nParams = 0 THEN
+		    addString:= NumToStr(BUFFER_JOINT_TIME_POS,2);
+		    ok := SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 45: !Execute moves in bufferJointTimePos using bufferJointTimes
 	        IF nParams = 0 THEN
 		    FOR i FROM 1 TO (BUFFER_JOINT_TIME_POS) DO
 		        MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
