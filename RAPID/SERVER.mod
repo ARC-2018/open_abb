@@ -8,6 +8,7 @@ MODULE SERVER
 PERS tooldata currentTool := [TRUE,[[0,0,0],[1,0,0,0]],[0.001,[0,0,0.001],[1,0,0,0],0,0,0]];    
 PERS wobjdata currentWobj := [FALSE,TRUE,"",[[0,0,0],[1,0,0,0]],[[0,0,0],[1,0,0,0]]];   
 PERS speeddata currentSpeed;
+PERS num currentMoveTime;
 PERS zonedata currentZone;
 
 !// Clock Synchronization
@@ -36,10 +37,13 @@ VAR bool moveCompleted; !Set to true after finishing a Move instruction.
 CONST num MAX_BUFFER := 512;
 VAR num BUFFER_POS := 0;
 VAR num BUFFER_JOINT_POS :=0;
+VAR num BUFFER_JOINT_TIME_POS :=0;
 VAR robtarget bufferTargets{MAX_BUFFER};
 VAR speeddata bufferSpeeds{MAX_BUFFER};
 VAR jointtarget bufferJointPos{MAX_BUFFER};
 VAR speeddata bufferJointSpeeds{MAX_BUFFER};
+VAR jointtarget bufferJointTimePos{MAX_BUFFER};
+VAR num bufferJointTimes{MAX_BUFFER};
 
 !//External axis position variables
 VAR extjoint externalAxis;
@@ -139,7 +143,8 @@ ENDPROC
 PROC Initialize()
     currentTool := [TRUE,[[0,0,0],[1,0,0,0]],[0.001,[0,0,0.001],[1,0,0,0],0,0,0]];    
     currentWobj := [FALSE,TRUE,"",[[0,0,0],[1,0,0,0]],[[0,0,0],[1,0,0,0]]];
-    currentSpeed := [100, 50, 0, 0];
+    currentSpeed := [150, 50, 0, 0];
+    currentMoveTime := 3;
     currentZone := [FALSE, 0.3, 0.3,0.3,0.03,0.3,0.03]; !z0
 	
 	!Find the current external axis values so they don't move when we start
@@ -160,7 +165,18 @@ PROC main()
     VAR bool reconnected;        !//Drop and reconnection happened during serving a command
     VAR robtarget cartesianPose;
     VAR jointtarget jointsPose;
-    			
+    VAR num SensorX:=1;
+    VAR num SensorY:=2;
+    VAR num SensorZ:=3;
+    VAR num SensorWX:=4;
+    VAR num SensorWY:=5;
+    VAR num SensorWZ:=6;
+    VAR num ForceX:=7;
+    VAR num ForceY:=8;
+    VAR num ForceZ:=9;
+    VAR num ForceWX:=10;
+    VAR num ForceWY:=11;
+    VAR num ForceWZ:=12;
     !//Motion configuration
     ConfL \Off;
     SingArea \Wrist;
@@ -173,6 +189,20 @@ PROC main()
     connected:=FALSE;
     ServerCreateAndConnect ipController,serverPort;	
     connected:=TRUE;
+    
+    !//Torque Sensor Definitions AC
+    TestSignDefine SensorX, 201, ROB_1, 1, 0;
+    TestSignDefine SensorY, 202, ROB_1, 1, 0;
+    TestSignDefine SensorZ, 203, ROB_1, 1, 0;
+    TestSignDefine SensorWX, 204, ROB_1, 1, 0;
+    TestSignDefine SensorWY, 205, ROB_1, 1, 0;
+    TestSignDefine SensorWZ, 206, ROB_1, 1, 0;
+    TestSignDefine ForceX, 207, ROB_1, 1, 0;
+    TestSignDefine ForceY, 208, ROB_1, 1, 0;
+    TestSignDefine ForceZ, 209, ROB_1, 1, 0;
+    TestSignDefine ForceWX, 210, ROB_1, 1, 0;
+    TestSignDefine ForceWY, 211, ROB_1, 1, 0;
+    TestSignDefine ForceWZ, 212, ROB_1, 1, 0;
     
     !//Server Loop
     WHILE TRUE DO
@@ -266,7 +296,7 @@ PROC main()
 					WHILE (frameMutex) DO
 						WaitTime .01; !// If the frame is being used by logger, wait here
 					ENDWHILE
-					frameMutex:= TRUE;
+					!//frameMutex:= TRUE;
                     currentTool.tframe.trans.x:=params{1};
                     currentTool.tframe.trans.y:=params{2};
                     currentTool.tframe.trans.z:=params{3};
@@ -325,7 +355,30 @@ PROC main()
                 ELSE
                     ok:=SERVER_BAD_MSG;
                 ENDIF
-
+            CASE 10: !Get Force-Torque Readings  -AC 2/16/2015
+                IF nParams = 0 THEN
+                    addString := NumToStr(TestSignRead(SensorX),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(SensorY),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(SensorZ),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(SensorWX),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(SensorWY),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(SensorWZ),2) + " "; !End of string
+                    ok := SERVER_OK;
+                ELSE
+                    ok:=SERVER_BAD_MSG;
+                ENDIF
+            CASE 11: !Get Force-Torque Readings Part2  -AC 2/16/2015
+                IF nParams = 0 THEN
+                    addString := NumToStr(TestSignRead(ForceX),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(ForceY),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(ForceZ),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(ForceWX),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(ForceWY),2) + " ";
+                    addString := addString + NumToStr(TestSignRead(ForceWZ),2) + " "; !End of string
+                    ok := SERVER_OK;
+                ELSE
+                    ok:=SERVER_BAD_MSG;
+                ENDIF
             CASE 30: !Add Cartesian Coordinates to buffer
                 IF nParams = 7 THEN
                     cartesianTarget :=[[params{1},params{2},params{3}],
@@ -406,7 +459,7 @@ PROC main()
 
 	    CASE 37: !Add Joint Positions to buffer
 	        IF nParams = 6 THEN
-		    jointsTarget :=[params{1},params{2},params{3},params{4},params{5},params{6}];
+		    jointsTarget := [[params{1},params{2},params{3},params{4},params{5},params{6}],externalAxis];
 		    IF BUFFER_JOINT_POS < MAX_BUFFER THEN
 		        BUFFER_JOINT_POS := BUFFER_JOINT_POS + 1;
 			bufferJointPos{BUFFER_JOINT_POS} :=jointsTarget;
@@ -433,11 +486,42 @@ PROC main()
 		    ok := SERVER_BAD_MSG;
 		ENDIF    
 
-	    
 	    CASE 40: !Execute moves in bufferJointPos
 	        IF nParams = 0 THEN
 		    FOR i FROM 1 TO (BUFFER_JOINT_POS) DO
 		        MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
+		    ENDFOR
+		    ok :=SERVER_OK;
+		ELSE
+           	    ok :=SERVER_BAD_MSG;
+		ENDIF
+
+
+	    CASE 41: !Set time the robot takes to make its next move
+                IF nParams = 1 THEN
+                    currentMoveTime:=params{1};
+                    ok := SERVER_OK;
+                ELSE
+                    ok:=SERVER_BAD_MSG;
+                ENDIF
+
+	    CASE 42: !Add Joint Positions to time-controlled buffer
+	        IF nParams = 6 THEN
+		    jointsTarget := [[params{1},params{2},params{3},params{4},params{5},params{6}],externalAxis];
+		    IF BUFFER_JOINT_TIME_POS < MAX_BUFFER THEN
+		        BUFFER_JOINT_TIME_POS := BUFFER_JOINT_TIME_POS + 1;
+			bufferJointTimePos{BUFFER_JOINT_TIME_POS} :=jointsTarget;
+			bufferJointTimes{BUFFER_JOINT_TIME_POS} := currentMoveTime;
+		    ENDIF
+		    ok := SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 43: !Execute moves in bufferJointTimePos using bufferJointTimes
+	        IF nParams = 0 THEN
+		    FOR i FROM 1 TO (BUFFER_JOINT_TIME_POS) DO
+		        MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
 		    ENDFOR
 		    ok :=SERVER_OK;
 		ELSE

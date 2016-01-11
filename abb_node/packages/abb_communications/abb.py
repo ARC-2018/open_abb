@@ -147,7 +147,20 @@ class Robot:
             time.sleep(self.idel)
             return data
         else: return False
-        
+
+            
+    # movetime is number of seconds in time-controlled move
+    def setMoveTime(self, moveTime=3):
+        if moveTime is not None:
+            msg = "41 " 
+            msg = msg + format(moveTime, "+08.1f") + " #"  
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            if self.verbose: print 'setMoveTime:', msg 
+            time.sleep(self.idel)
+            return data
+        else: return False
+
     def setZone(self, zoneKey='z1', finep = False, manualZone=[]):
         zoneDict = {'z0': [.3,.3,.03], 'z1': [1,1,.1], 'z5': [5,8,.8], 
                     'z10': [10,15,1.5], 'z15': [15,23,2.3], 'z20': [20,30,3], 
@@ -261,11 +274,11 @@ class Robot:
             return False
 
     def addJointPosBuffer(self,joint_pos):
-	#appends single joint position to the buffer
-	if len(joint_pos) == 6:
-            msg = "37"
+        #appends single joint position to the buffer
+        if len(joint_pos) == 6:
+            msg = "37 "
             msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
-            if self.verbose: print 'addJointBuffer:',msg
+            if self.verbose: print 'addJointPosBuffer:',msg
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
             time.sleep(self.idel)
@@ -298,6 +311,31 @@ class Robot:
         except: pass
         if self.verbose: print 'Coordinate check failed on', coords
         return False
+
+    def addJointPosTimeBuffer(self,joint_pos):
+        #appends single joint position to the buffer
+        if len(joint_pos) == 6:
+            msg = "42 "
+            msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
+            if self.verbose: print 'addJointPosTimeBuffer:',msg
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            time.sleep(self.idel)
+            return data
+        else:
+            return False
+
+    def clearJointPosTimeBuffer(self):
+        raise NotImplementedError('clearJointPosTimeBuffer not yet implemented in RAPID')
+
+    def lenJointPosTimeBuffer(self):
+        raise NotImplementedError('lenJointPosTimeBuffer not yet implemented in RAPID')
+
+    def executeJointPosTimeBuffer(self):
+        msg = "43 #"
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        return data
 
     def close(self):
         self.robsock.shutdown(socket.SHUT_RDWR)
