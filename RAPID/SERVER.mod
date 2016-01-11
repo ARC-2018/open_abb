@@ -488,9 +488,11 @@ PROC main()
 
 	    CASE 40: !Execute moves in bufferJointPos
 	        IF nParams = 0 THEN
+	        IF BUFFER_JOINT_POS > 0 THEN
 		    FOR i FROM 1 TO (BUFFER_JOINT_POS) DO
 		        MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
 		    ENDFOR
+		    ENDIF
 		    ok :=SERVER_OK;
 		ELSE
            	    ok :=SERVER_BAD_MSG;
@@ -536,13 +538,18 @@ PROC main()
 
 	    CASE 45: !Execute moves in bufferJointTimePos using bufferJointTimes
 	        IF nParams = 0 THEN
-		    FOR i FROM 1 TO (BUFFER_JOINT_TIME_POS) DO
-		        MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
-		    ENDFOR
-		    ok :=SERVER_OK;
-		ELSE
-           	    ok :=SERVER_BAD_MSG;
-		ENDIF
+	            IF BUFFER_JOINT_TIME_POS > 0 THEN
+	                MoveAbsJ bufferJointTimePos{1}, currentSpeed, currentZone, currentTool, \Wobj:=currentWobj;
+	                IF BUFFER_JOINT_TIME_POS > 1 THEN
+		            FOR i FROM 2 TO (BUFFER_JOINT_TIME_POS) DO
+		                MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
+		            ENDFOR
+	                ENDIF
+	            ENDIF
+		        ok :=SERVER_OK;
+		    ELSE
+		        ok :=SERVER_BAD_MSG;
+		    ENDIF
 
             CASE 98: !returns current robot info: serial number, robotware version, and robot type
                 IF nParams = 0 THEN
@@ -553,7 +560,7 @@ PROC main()
                 ELSE
                     ok :=SERVER_BAD_MSG;
                 ENDIF
-			
+
             CASE 99: !Close Connection
                 IF nParams = 0 THEN
                     TPWrite "SERVER: Client has closed connection.";
