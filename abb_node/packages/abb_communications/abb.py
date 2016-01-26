@@ -18,7 +18,7 @@ class Robot:
         
         self.BUFLEN = 4096; self.idel = .01
         self.remote = (IP, PORT)
-	self.verbose = verbose
+        self.verbose = verbose
         self.connect()
         
         if toolfile == None: self.setTool(tool)
@@ -34,6 +34,13 @@ class Robot:
         if self.verbose: print 'Attempting to connect to ABB robot at', self.remote
         self.robsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.robsock.connect(self.remote)
+
+    def getForceSensors(self):
+        msg = "10 #"
+        self.robsock.send(msg)
+        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        ft = [float(s) for s in data[2:8]]
+        return ft
 
     def setCartesian(self, pos):
         if len(pos) == 7: pos = [pos[0:3], pos[3:7]]
