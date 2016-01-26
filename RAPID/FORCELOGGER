@@ -1,0 +1,118 @@
+MODULE FORCELOGGER
+
+!////////////////
+!GLOBAL VARIABLES
+!////////////////
+!PC communication
+VAR socketdev clientSocket;
+VAR socketdev serverSocket;
+PERS string ipController;
+PERS num loggerPort:= 5002;
+
+!Robot configuration	
+PERS tooldata currentTool;    
+PERS wobjdata currentWobj;
+VAR speeddata currentSpeed;
+VAR zonedata currentZone;
+
+!//Logger sampling rate
+!PERS num loggerWaitTime:= 0.01;  !Recommended for real controller
+PERS num loggerWaitTime:= 0.1;    !Recommended for virtual controller
+
+PROC ServerCreateAndConnect(string ip, num port)
+	VAR string clientIP;
+	
+	SocketCreate serverSocket;
+	SocketBind serverSocket, ip, port;
+	SocketListen serverSocket;
+	TPWrite "LOGGER: Logger waiting for incomming connections ...";
+	WHILE SocketGetStatus(clientSocket) <> SOCKET_CONNECTED DO
+		SocketAccept serverSocket,clientSocket \ClientAddress:=clientIP \Time:=WAIT_MAX;
+		IF SocketGetStatus(clientSocket) <> SOCKET_CONNECTED THEN
+			TPWrite "LOGGER: Problem serving an incomming connection.";
+			TPWrite "LOGGER: Try reconnecting.";
+		ENDIF
+		 !Wait 0.5 seconds for the next reconnection
+		 WaitTime 0.5;
+	ENDWHILE
+	TPWrite "LOGGER: Connected to IP " + clientIP;
+ENDPROC
+
+PROC main()
+	VAR string data;
+	VAR robtarget position;
+	VAR jointtarget joints;
+    VAR string sendString;
+	VAR bool connected;
+
+	VAR string date;
+	VAR string time;
+	VAR clock timer;
+
+	date:= CDate();
+	time:= CTime();
+    ClkStart timer;
+    
+	connected:=FALSE;
+	ServerCreateAndConnect ipController,loggerPort;	
+	connected:=TRUE;
+        !Define Test Signal Channel
+        TestSignDefine 1, SensorX, 201, ROB_1, 1, 0
+        TestSignDefine 2, SensorY, 202, ROB_1, 1, 0
+        TestSignDefine 3, SensorZ, 203, ROB_1, 1, 0
+        TestSignDefine 4, SensorWX, 204, ROB_1, 1, 0
+        TestSignDefine 5, SensorWY, 205, ROB_1, 1, 0
+        TestSignDefine 6, SensorWZ, 206, ROB_1, 1, 0
+        TestSignDefine 7, ForceX, 207, ROB_1, 1, 0
+        TestSignDefine 8, ForceY, 208, ROB_1, 1, 0
+        TestSignDefine 9, ForceZ, 209, ROB_1, 1, 0
+        TestSignDefine 10, ForceWX, 210, ROB_1, 1, 0
+        TestSignDefine 11, ForceWY, 211, ROB_1, 1, 0
+        TestSignDefine 12, ForceWZ, 212, ROB_1, 1, 0
+       
+        
+	WHILE TRUE DO
+		
+		!ReadTestSignals
+	        
+		data := "# 2 ";
+		data := data + date + " " + time + " ";
+		data := data + TestSignRead(1) + " ";
+		data := data + TestSignRead(2) + " ";
+		data := data + TestSignRead(3) + " ";
+		data := data + TestSignRead(4) + " ";
+		data := data + TestSignRead(5) + " ";
+		data := data + TestSignRead(6) + " ";
+		data := data + TestSignRead(7) + " ";
+		data := data + TestSignRead(8) + " ";
+		data := data + TestSignRead(9) + " ";
+		data := data + TestSignRead(10) + " ";
+		data := data + TestSignRead(11) + " ";
+		data := data + TestSignRead(12) + " "; !End of string	
+		IF connected = TRUE THEN
+			SocketSend clientSocket \Str:=data;
+		ENDIF
+		WaitTime loggerWaitTime;
+	
+		IF connected = TRUE THEN
+			SocketSend clientSocket \Str:=data;
+		ENDIF
+		WaitTime loggerWaitTime;
+	ENDWHILE
+	ERROR
+	IF ERRNO=ERR_SOCK_CLOSED THEN
+		TPWrite "LOGGER: Client has closed connection.";
+	ELSE
+		TPWrite "LOGGER: Connection lost: Unknown problem.";
+	ENDIF
+	connected:=FALSE;
+	!Closing the server
+	SocketClose clientSocket;
+	SocketClose serverSocket;
+	!Reinitiate the server
+	ServerCreateAndConnect ipController,loggerPort;
+	connected:= TRUE;
+	RETRY;
+ENDPROC
+
+ENDMODULE

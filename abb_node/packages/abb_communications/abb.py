@@ -1,6 +1,6 @@
 '''
 Michael Dawson-Haggerty
-
+Edited by Alex Chen: Created two sockets to enable simutaneous command execution and joints state reading
 abb.py: contains classes and support functions which interact with an ABB Robot running our software stack (RAPID code module SERVER)
 
 NOTES:
@@ -17,9 +17,11 @@ class Robot:
     def __init__(self, IP='192.168.125.1', PORT=5000, wobj=[[0,0,0],[1,0,0,0]], tool=[[0,0,0], [1,0,0,0]], speed = [100,50,50,50], zone='z5', toolfile=None, zeroJoints = False, verbose=False):
         
         self.BUFLEN = 4096; self.idel = .01
-        self.remote = (IP, PORT)
+        self.remoteCommand = (IP, PORT)
+        self.remoteReadout = (IP, PORT+2)
 	self.verbose = verbose
-        self.connect()
+        self.connectCommand()
+        self.connectReadout()
         
         if toolfile == None: self.setTool(tool)
         else: setToolFile(toolfile)
@@ -30,12 +32,18 @@ class Robot:
         if zeroJoints: 
             self.setJoints()
 
-    def connect(self):        
-        if self.verbose: print 'Attempting to connect to ABB robot at', self.remote
-        self.robsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robsock.connect(self.remote)
+    def connectCommand(self):        
+        if self.verbose: print 'Attempting to connect to ABB robot at', self.remoteCommand
+        self.robsockCommand = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.robsockCommand.connect(self.remoteCommand)
 
-    def setCartesian(self, pos):
+    def connectReadout(self):
+        if self.verbose: print 'Attempting to connect to ABB robot at', self.remoteReadout
+        self.robsockReadout = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.robsockReadout.connect(self.remoteReadout)
+
+
+    def setCartesian(self, pos): #Command
         if len(pos) == 7: pos = [pos[0:3], pos[3:7]]
         if self.checkCoordinates(pos):
             msg = "01 " 
@@ -43,52 +51,70 @@ class Robot:
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setCartesian:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             return data
         else:
             return False
 
-    def setJoints(self, j = [0,0,0,0,90,0]):
+    def setJoints(self, j = [0,0,0,0,90,0]): #Command
         if len(j) == 6:
             msg = "02 " 
             msg = msg + format(j[0], "+08.2f") + " " + format(j[1], "+08.2f") + " " + format(j[2], "+08.2f") + " " 
             msg = msg + format(j[3], "+08.2f") + " " + format(j[4], "+08.2f") + " " + format(j[5], "+08.2f") + " #" 
             if self.verbose: print 'setJoints:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)  
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)  
+            if self.verbose: print 'setJointsReturn:',data
             return data
         else: return False
 
-    def getCartesian(self):
+    def getCartesian(self):  #Readout
         msg = "03 #"
-        self.robsock.send(msg)
-        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.robsockReadout.send(msg)
+        data = str(self.robsockReadout.recv(self.BUFLEN)).split(' ')
+	print data
         r = [float(s) for s in data]
+
         return [r[2:5], r[5:9]]
 
-    def getJoints(self):
+    def getJoints(self): #Readout
         msg = "04 #"
-        self.robsock.send(msg)
-        data = (str(self.robsock.recv(self.BUFLEN)).split(' '))
+        self.robsockReadout.send(msg)
+        data = (str(self.robsockReadout.recv(self.BUFLEN)).split(' '))
         r = [float(s) for s in data]
         return r[2:8]
+#AC's Modification
+    def getForceSensors(self): #Readout
+        msg = "10 #"
+        self.robsockReadout.send(msg)
+        data = (str(self.robsockReadout.recv(self.BUFLEN)).split(' '))
+	r = [float(s) for s in data[2:8]]
+        return r
 
-    def getExternalAxis(self):
+    def getForceSensors2(self):#Readout
+        msg = "11 #"
+        self.robsockReadout.send(msg)
+        data = (str(self.robsockReadout.recv(self.BUFLEN)).split(' '))
+	r = [float(s) for s in data[2:8]]
+        return r
+#End Modification
+
+    def getExternalAxis(self):#Readout
         msg = "05 #"
-        self.robsock.send(msg)
-        data = (str(self.robsock.recv(self.BUFLEN)).split(' '))
+        self.robsockReadout.send(msg)
+        data = (str(self.robsockReadout.recv(self.BUFLEN)).split(' '))
         print data
         r = [float(s) for s in data]
         return r[2:8]
 
-    def getRobotInfo(self):
+    def getRobotInfo(self):#Readout
         msg = "98 #"
-        self.robsock.send(msg)
-        data = (str(self.robsock.recv(self.BUFLEN))[5:].split('*'))
+        self.robsockReadout.send(msg)
+        data = (str(self.robsockReadout.recv(self.BUFLEN))[5:].split('*'))
         return data
 
-    def setTool(self, tool=[[0,0,0], [1,0,0,0]]):
+    def setTool(self, tool=[[0,0,0], [1,0,0,0]]): #Command
         #sets the tool object of the robot. 
         #Offsets are from tool0 (tool flange center axis/ flange face intersection)
         if len(tool) == 7: tool = [tool[0:3], tool[3:7]]
@@ -98,14 +124,14 @@ class Robot:
             msg = msg + format(tool[1][0], "+08.5f") + " " + format(tool[1][1], "+08.5f") + " " 
             msg = msg + format(tool[1][2], "+08.5f") + " " + format(tool[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setTool:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             self.tool = tool
             time.sleep(self.idel)
             return data
         else: return False
 
-    def setToolFile(self, filename):
+    def setToolFile(self, filename): #Command(Wrapper)
         if os.path.exists(filename):
             f = open(filename, 'rb');        
             try: tool = json.load(f)
@@ -117,10 +143,10 @@ class Robot:
             return False
         self.setTool(tool)
         
-    def getTool(self): 
+    def getTool(self): #N/A
         return self.tool
 
-    def setWorkObject(self, wobj=[[0,0,0],[1,0,0,0]]):
+    def setWorkObject(self, wobj=[[0,0,0],[1,0,0,0]]): #Command
         if len(wobj) == 7: pos = [wobj[0:3], wobj[3:7]]
         if self.checkCoordinates(wobj):
             msg = "07 " 
@@ -128,27 +154,27 @@ class Robot:
             msg = msg + format(wobj[1][0], "+08.5f") + " " + format(wobj[1][1], "+08.5f") + " " 
             msg = msg + format(wobj[1][2], "+08.5f") + " " + format(wobj[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setWorkObject:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             time.sleep(self.idel)
             return data
         else: return False
             
     #speed is [linear speed (mm/s), orientation speed (deg/s),
     #          external axis linear, external axis orientation]
-    def setSpeed(self, speed=[100,50,50,50]):
+    def setSpeed(self, speed=[100,50,50,50]): #Command
         if len(speed) == 4:
             msg = "08 " 
             msg = msg + format(speed[0], "+08.1f") + " " + format(speed[1], "+08.2f") + " "  
             msg = msg + format(speed[2], "+08.1f") + " " + format(speed[3], "+08.2f") + " #"  
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             if self.verbose: print 'setSpeed:', msg 
             time.sleep(self.idel)
             return data
         else: return False
         
-    def setZone(self, zoneKey='z1', finep = False, manualZone=[]):
+    def setZone(self, zoneKey='z1', finep = False, manualZone=[]): #Command
         zoneDict = {'z0': [.3,.3,.03], 'z1': [1,1,.1], 'z5': [5,8,.8], 
                     'z10': [10,15,1.5], 'z15': [15,23,2.3], 'z20': [20,30,3], 
                     'z30': [30,45,4.5], 'z50': [50,75,7.5], 'z100': [100,150,15], 
@@ -172,13 +198,13 @@ class Robot:
         msg = "09 " 
         msg = msg + str(int(finep)) + " "
         msg = msg + format(zone[0], "+08.4f") + " " + format(zone[1], "+08.4f") + " " + format(zone[2], "+08.4f") + " #" 
-        self.robsock.send(msg)
-        data = self.robsock.recv(self.BUFLEN)
+        self.robsockCommand.send(msg)
+        data = self.robsockCommand.recv(self.BUFLEN)
         if self.verbose: print 'setZone:', msg
         time.sleep(self.idel)
         return data
 
-    def addBuffer(self, pos):
+    def addBuffer(self, pos): #Command
         #appends single target to the buffer
         #move will execute at current speed (which you can change between addBuffer calls)
         if len(pos) == 7: pos = [pos[0:3], pos[3:7]]
@@ -188,15 +214,15 @@ class Robot:
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
             if self.verbose: print 'addBuffer:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             time.sleep(self.idel)
             return data
         else:
             return False
         
     #adds every position in posList to the buffer
-    def setBuffer(self, posList, gotoFirst=False):
+    def setBuffer(self, posList, gotoFirst=False):  #Command(Wrapper)
         self.clearBuffer()
         if self.lenBuffer() <> 0: return False
         for i in posList: self.addBuffer(i)
@@ -206,38 +232,38 @@ class Robot:
             self.clearBuffer()
             return False
 
-    def clearBuffer(self):
+    def clearBuffer(self): #Command
         msg = "31 #"
-        self.robsock.send(msg)
-        data = self.robsock.recv(self.BUFLEN)
+        self.robsockCommand.send(msg)
+        data = self.robsockCommand.recv(self.BUFLEN)
         return data
 
-    def lenBuffer(self):
+    def lenBuffer(self):#Command
         msg = "32 #"
-        self.robsock.send(msg)
-        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.robsockCommand.send(msg)
+        data = str(self.robsockCommand.recv(self.BUFLEN)).split(' ')
         return int(float(data[2]))
 
     #execute every move in buffer as MoveL command (linear move)
-    def executeBuffer(self):
+    def executeBuffer(self):#Command
         msg = "33 #"
-        self.robsock.send(msg)
-        data = self.robsock.recv(self.BUFLEN)
+        self.robsockCommand.send(msg)
+        data = self.robsockCommand.recv(self.BUFLEN)
         return data
 
-    def setExternalAxis(self, axisValues=[-550,0,0,0,0,0]):
+    def setExternalAxis(self, axisValues=[-550,0,0,0,0,0]): #Command
         if len(axisValues) == 6:
             msg = "34 " 
             msg = msg + format(axisValues[0], "+08.2f") + " " + format(axisValues[1], "+08.2f") + " " + format(axisValues[2], "+08.2f") + " " 
             msg = msg + format(axisValues[3], "+08.2f") + " " + format(axisValues[4], "+08.2f") + " " + format(axisValues[5], "+08.2f") + " #" 
             if self.verbose: print 'setExternalAxis:', msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)  
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)  
             return data
         else: return False
 
     # moves the tool centerpoint in a circular path from current position, through circlePoint, to endPoint
-    def setCircular(self, circlePoint, endPoint):
+    def setCircular(self, circlePoint, endPoint): #Command
         if len(circlePoint) == 7: circlePoint = [circlePoint[0:3], circlePoint[3:7]]
         if len(endPoint) == 7: endPoint = [endPoint[0:3], endPoint[3:7]]
 
@@ -246,52 +272,52 @@ class Robot:
             msg = msg + format(circlePoint[0][0], "+08.1f") + " " + format(circlePoint[0][1], "+08.1f") + " " + format(circlePoint[0][2], "+08.1f") + " " 
             msg = msg + format(circlePoint[1][0], "+08.5f") + " " + format(circlePoint[1][1], "+08.5f") + " " 
             msg = msg + format(circlePoint[1][2], "+08.5f") + " " + format(circlePoint[1][3], "+08.5f") + " #"    
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             if data <> '15 1 ': return False
             msg = "36 " 
             msg = msg + format(endPoint[0][0], "+08.1f") + " " + format(endPoint[0][1], "+08.1f") + " " + format(endPoint[0][2], "+08.1f") + " " 
             msg = msg + format(endPoint[1][0], "+08.5f") + " " + format(endPoint[1][1], "+08.5f") + " " 
             msg = msg + format(endPoint[1][2], "+08.5f") + " " + format(endPoint[1][3], "+08.5f") + " #"    
 
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             return data
         else:
             return False
 
-    def addJointPosBuffer(self,joint_pos):
+    def addJointPosBuffer(self,joint_pos): #Command
 	#appends single joint position to the buffer
 	if len(joint_pos) == 6:
-            msg = "37"
+            msg = "37 "
             msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
             if self.verbose: print 'addJointBuffer:',msg
-            self.robsock.send(msg)
-            data = self.robsock.recv(self.BUFLEN)
+            self.robsockCommand.send(msg)
+            data = self.robsockCommand.recv(self.BUFLEN)
             time.sleep(self.idel)
             return data
         else:
             return False
 
-    def clearJointPosBuffer(self):
+    def clearJointPosBuffer(self): #Command
         msg = "38 #"
-        self.robsock.send(msg)
-        data = self.robsock.recv(self.BUFLEN)
+        self.robsockCommand.send(msg)
+        data = self.robsockCommand.recv(self.BUFLEN)
         return data
 
-    def lenJointPosBuffer(self):
+    def lenJointPosBuffer(self): #Command
         msg = "39 #"
-        self.robsock.send(msg)
-        data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.robsockCommand.send(msg)
+        data = str(self.robsockCommand.recv(self.BUFLEN)).split(' ')
         return int(float(data[2]))
 
-    def executeJointPosBuffer(self):
+    def executeJointPosBuffer(self): #Command
         msg = "40 #"
-        self.robsock.send(msg)
-        data = self.robsock.recv(self.BUFLEN)
+        self.robsockCommand.send(msg)
+        data = self.robsockCommand.recv(self.BUFLEN)
         return data
 
-    def checkCoordinates(self, coords):
+    def checkCoordinates(self, coords):  #N/A
         try: 
             if (len(coords) == 2):
                 if ((len(coords[0]) == 3) & (len(coords[1]) == 4)): return True
@@ -299,9 +325,11 @@ class Robot:
         if self.verbose: print 'Coordinate check failed on', coords
         return False
 
-    def close(self):
-        self.robsock.shutdown(socket.SHUT_RDWR)
-        self.robsock.close()
+    def close(self): 
+        self.robsockCommand.shutdown(socket.SHUT_RDWR)
+        self.robsockReadout.shutdown(sock.SHUT_RDWR)
+        self.robsockCommand.close()
+        self.robsockReadout.close()
 
     def __del__(self):
         try: self.close()

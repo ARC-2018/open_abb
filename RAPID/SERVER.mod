@@ -8,6 +8,7 @@ MODULE SERVER
 PERS tooldata currentTool := [TRUE,[[0,0,0],[1,0,0,0]],[0.001,[0,0,0.001],[1,0,0,0],0,0,0]];    
 PERS wobjdata currentWobj := [FALSE,TRUE,"",[[0,0,0],[1,0,0,0]],[[0,0,0],[1,0,0,0]]];   
 PERS speeddata currentSpeed;
+PERS num currentMoveTime;
 PERS zonedata currentZone;
 
 !// Clock Synchronization
@@ -40,6 +41,8 @@ VAR robtarget bufferTargets{MAX_BUFFER};
 VAR speeddata bufferSpeeds{MAX_BUFFER};
 VAR jointtarget bufferJointPos{MAX_BUFFER};
 VAR speeddata bufferJointSpeeds{MAX_BUFFER};
+VAR jointtarget bufferJointTimePos{MAX_BUFFER};
+VAR num bufferJointTimes{MAX_BUFFER};
 
 !//External axis position variables
 VAR extjoint externalAxis;
@@ -431,13 +434,43 @@ PROC main()
 		    ok := SERVER_OK;
 		ELSE
 		    ok := SERVER_BAD_MSG;
-		ENDIF    
+		ENDIF
 
-	    
 	    CASE 40: !Execute moves in bufferJointPos
 	        IF nParams = 0 THEN
 		    FOR i FROM 1 TO (BUFFER_JOINT_POS) DO
 		        MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
+		    ENDFOR
+		    ok :=SERVER_OK;
+		ELSE
+           	    ok :=SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 41: !Set time of the next Robot joint-time frame
+                IF nParams = 1 THEN
+                    currentMoveTime:=params{1};
+                    ok := SERVER_OK;
+                ELSE
+                    ok:=SERVER_BAD_MSG;
+                ENDIF
+
+	    CASE 42: !Add Joint Positions to time-controlled buffer
+	        IF nParams = 6 THEN
+		    jointsTarget := [params{1},params{2},params{3},params{4},params{5},params{6}];
+		    IF BUFFER_JOINT_TIME_POS < MAX_BUFFER THEN
+		        BUFFER_JOINT_TIME_POS := BUFFER_JOINT_TIME_POS + 1;
+			bufferJointTimePos{BUFFER_JOINT_TIME_POS} :=jointsTarget;
+			bufferJointTimes{BUFFER_JOINT_TIME_POS} := currentMoveTime;
+		    ENDIF
+		    ok := SERVER_OK;
+		ELSE
+		    ok := SERVER_BAD_MSG;
+		ENDIF
+
+	    CASE 43: !Execute moves in bufferJointTimePos using bufferJointTimes
+	        IF nParams = 0 THEN
+		    FOR i FROM 1 TO (BUFFER_JOINT_TIME_POS) DO
+		        MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
 		    ENDFOR
 		    ok :=SERVER_OK;
 		ELSE
