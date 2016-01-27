@@ -19,6 +19,7 @@ class Robot:
         self.BUFLEN = 4096; self.idel = .01
         self.remote = (IP, PORT)
         self.verbose = verbose
+        self.commslock = threading.Lock()
         self.connect()
         
         if toolfile == None: self.setTool(tool)
@@ -37,8 +38,10 @@ class Robot:
 
     def getForceSensors(self):
         msg = "10 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.commslock.release()
         ft = [float(s) for s in data[2:8]]
         return ft
 
@@ -50,8 +53,10 @@ class Robot:
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setCartesian:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             return data
         else:
             return False
@@ -62,37 +67,46 @@ class Robot:
             msg = msg + format(j[0], "+08.2f") + " " + format(j[1], "+08.2f") + " " + format(j[2], "+08.2f") + " " 
             msg = msg + format(j[3], "+08.2f") + " " + format(j[4], "+08.2f") + " " + format(j[5], "+08.2f") + " #" 
             if self.verbose: print 'setJoints:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)  
+            self.commslock.release()
             return data
         else: return False
 
     def getCartesian(self):
         msg = "03 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
-        r = [float(s) for s in data]
-        return [r[2:5], r[5:9]]
+        self.commslock.release()
+        r = [float(s) for s in data[2:9]]
+        return [r[0:3], r[3:7]]
 
     def getJoints(self):
         msg = "04 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = (str(self.robsock.recv(self.BUFLEN)).split(' '))
-        r = [float(s) for s in data]
-        return r[2:8]
+        self.commslock.release()
+        r = [float(s) for s in data[2:8]]
+        return r
 
     def getExternalAxis(self):
         msg = "05 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = (str(self.robsock.recv(self.BUFLEN)).split(' '))
-        print data
-        r = [float(s) for s in data]
-        return r[2:8]
+        self.commslock.release()
+        r = [float(s) for s in data[2:8]]
+        return r
 
     def getRobotInfo(self):
         msg = "98 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = (str(self.robsock.recv(self.BUFLEN))[5:].split('*'))
+        self.commslock.release()
         return data
 
     def setTool(self, tool=[[0,0,0], [1,0,0,0]]):
@@ -105,8 +119,10 @@ class Robot:
             msg = msg + format(tool[1][0], "+08.5f") + " " + format(tool[1][1], "+08.5f") + " " 
             msg = msg + format(tool[1][2], "+08.5f") + " " + format(tool[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setTool:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             self.tool = tool
             time.sleep(self.idel)
             return data
@@ -135,8 +151,10 @@ class Robot:
             msg = msg + format(wobj[1][0], "+08.5f") + " " + format(wobj[1][1], "+08.5f") + " " 
             msg = msg + format(wobj[1][2], "+08.5f") + " " + format(wobj[1][3], "+08.5f") + " #"    
             if self.verbose: print 'setWorkObject:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             time.sleep(self.idel)
             return data
         else: return False
@@ -148,8 +166,10 @@ class Robot:
             msg = "08 " 
             msg = msg + format(speed[0], "+08.1f") + " " + format(speed[1], "+08.2f") + " "  
             msg = msg + format(speed[2], "+08.1f") + " " + format(speed[3], "+08.2f") + " #"  
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             if self.verbose: print 'setSpeed:', msg 
             time.sleep(self.idel)
             return data
@@ -161,8 +181,10 @@ class Robot:
         if moveTime is not None:
             msg = "41 " 
             msg = msg + format(moveTime, "+08.1f") + " #"  
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             if self.verbose: print 'setMoveTime:', msg 
             time.sleep(self.idel)
             return data
@@ -192,8 +214,10 @@ class Robot:
         msg = "09 " 
         msg = msg + str(int(finep)) + " "
         msg = msg + format(zone[0], "+08.4f") + " " + format(zone[1], "+08.4f") + " " + format(zone[2], "+08.4f") + " #" 
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         if self.verbose: print 'setZone:', msg
         time.sleep(self.idel)
         return data
@@ -208,8 +232,10 @@ class Robot:
             msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
             msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
             if self.verbose: print 'addBuffer:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             time.sleep(self.idel)
             return data
         else:
@@ -228,21 +254,27 @@ class Robot:
 
     def clearBuffer(self):
         msg = "31 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def lenBuffer(self):
         msg = "32 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.commslock.release()
         return int(float(data[2]))
 
     #execute every move in buffer as MoveL command (linear move)
     def executeBuffer(self):
         msg = "33 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def setExternalAxis(self, axisValues=[-550,0,0,0,0,0]):
@@ -251,8 +283,10 @@ class Robot:
             msg = msg + format(axisValues[0], "+08.2f") + " " + format(axisValues[1], "+08.2f") + " " + format(axisValues[2], "+08.2f") + " " 
             msg = msg + format(axisValues[3], "+08.2f") + " " + format(axisValues[4], "+08.2f") + " " + format(axisValues[5], "+08.2f") + " #" 
             if self.verbose: print 'setExternalAxis:', msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)  
+            self.commslock.release()
             return data
         else: return False
 
@@ -266,8 +300,11 @@ class Robot:
             msg = msg + format(circlePoint[0][0], "+08.1f") + " " + format(circlePoint[0][1], "+08.1f") + " " + format(circlePoint[0][2], "+08.1f") + " " 
             msg = msg + format(circlePoint[1][0], "+08.5f") + " " + format(circlePoint[1][1], "+08.5f") + " " 
             msg = msg + format(circlePoint[1][2], "+08.5f") + " " + format(circlePoint[1][3], "+08.5f") + " #"    
+            
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             if data <> '15 1 ': return False
             msg = "36 " 
             msg = msg + format(endPoint[0][0], "+08.1f") + " " + format(endPoint[0][1], "+08.1f") + " " + format(endPoint[0][2], "+08.1f") + " " 
@@ -286,8 +323,11 @@ class Robot:
             msg = "37 "
             msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
             if self.verbose: print 'addJointPosBuffer:',msg
+            
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             time.sleep(self.idel)
             return data
         else:
@@ -295,20 +335,26 @@ class Robot:
 
     def clearJointPosBuffer(self):
         msg = "38 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def lenJointPosBuffer(self):
         msg = "39 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.commslock.release()
         return int(float(data[2]))
 
     def executeJointPosBuffer(self):
         msg = "40 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def checkCoordinates(self, coords):
@@ -325,8 +371,10 @@ class Robot:
             msg = "42 "
             msg = msg + format(joint_pos[0],"+08.2f")+" "+ format(joint_pos[1],"+08.2f")+" "+ format(joint_pos[2],"+08.2f")+" "+ format(joint_pos[3],"+08.2f")+" "+ format(joint_pos[4],"+08.2f")+" "+ format(joint_pos[5],"+08.2f")+" #"
             if self.verbose: print 'addJointPosTimeBuffer:',msg
+            self.commslock.acquire()
             self.robsock.send(msg)
             data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
             time.sleep(self.idel)
             return data
         else:
@@ -334,20 +382,26 @@ class Robot:
 
     def clearJointPosTimeBuffer(self):
         msg = "43 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def lenJointPosTimeBuffer(self):
         msg = "44 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = str(self.robsock.recv(self.BUFLEN)).split(' ')
+        self.commslock.release()
         return int(float(data[2]))
         
     def executeJointPosTimeBuffer(self):
         msg = "45 #"
+        self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
         return data
 
     def close(self):
