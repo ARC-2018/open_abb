@@ -418,11 +418,36 @@ class Logger:
         self.PORT    = PORT
         self.verbose = verbose
 
+        self.dataLock = threading.Lock()
         self.joints    = deque(maxlen=maxlen)
         self.cartesian = deque(maxlen=maxlen)
         self.L = threading.Lock()
         self.active = True        
         pn = threading.Thread(target=self.getNet).start()
+
+    def getCartesian(self):
+        self.dataLock.acquire()
+        if len(self.cartesian) > 0:
+            data = self.cartesian[0][1]
+        else:
+            data = None
+        self.dataLock.release() 
+        if data:
+            return [float(x) for x in data[0:3], float(x) for x in data[3:7]]
+        else:
+            return None
+
+    def getJoints(self):
+        self.dataLock.acquire()
+        if len(self.joints) > 0:
+            data = self.joints[0][1]
+        else:
+            data = None
+        self.dataLock.release() 
+        if data:
+            return float(x) for x in data
+        else:
+            return None
 
     def getNet(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -432,11 +457,14 @@ class Logger:
             with self.L:
                 if not self.active: 
                     break
+
             data = s.recv(8192)
             a = str(data).split(' ')
             if self.verbose: print a
+            self.dataLock.acquire()
             if a[1] == '0':   self.cartesian.appendleft([a[2:5], a[5:]])
             elif a[1] == '1': self.joints.appendleft([a[2:5], a[5:]])
+            self.dataLock.release()
         #supposedly not necessary but the robot gets mad if you don't do this
         s.shutdown(socket.SHUT_RDWR)
         s.close()
