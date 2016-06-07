@@ -16,7 +16,7 @@ VAR speeddata currentSpeed;
 VAR zonedata currentZone;
 
 !//Logger sampling rate
-PERS num loggerWaitTime:= 0.01;  !Recommended for real controller
+PERS num loggerWaitTime:= 0.02;  !Recommended for real controller
 !PERS num loggerWaitTime:= 0.1;    !Recommended for virtual controller
 
 PROC ServerCreateAndConnect(string ip, num port)
@@ -49,6 +49,19 @@ PROC main()
 	VAR string time;
 	VAR clock timer;
 
+    VAR num SensorX:=1;
+    VAR num SensorY:=2;
+    VAR num SensorZ:=3;
+    VAR num SensorWX:=4;
+    VAR num SensorWY:=5;
+    VAR num SensorWZ:=6;
+    VAR num ForceX:=7;
+    VAR num ForceY:=8;
+    VAR num ForceZ:=9;
+    VAR num ForceWX:=10;
+    VAR num ForceWY:=11;
+    VAR num ForceWZ:=12;
+    
 	!//Torque Sensor Definitions
     TestSignDefine SensorX, 201, ROB_1, 1, 0;
     TestSignDefine SensorY, 202, ROB_1, 1, 0;
@@ -114,7 +127,7 @@ PROC main()
 		data := data + NumToStr(TestSignRead(SensorZ),2) + " ";
 		data := data + NumToStr(TestSignRead(SensorWX),2) + " ";
 		data := data + NumToStr(TestSignRead(SensorWY),2) + " ";
-		data := data + NumToStr(TestSignRead(SensorWZ),2) + " "; !End of string
+		data := data + NumToStr(TestSignRead(SensorWZ),2); !End of string
 		IF connected = TRUE THEN
 			SocketSend clientSocket \Str:=data;
 		ENDIF

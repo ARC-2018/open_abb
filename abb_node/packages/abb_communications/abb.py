@@ -434,9 +434,12 @@ class Logger:
             data = None
         self.dataLock.release() 
         if data:
-            return [[float(x) for x in data[0:3]],[float(x) for x in data[3:7]]]
-        else:
-            return None
+            try:
+                return [[float(x) for x in data[0:3]],[float(x) for x in data[3:7]]]
+            except Exception as e:
+                print e
+        return None
+
 
     def getJoints(self):
         self.dataLock.acquire()
@@ -446,9 +449,11 @@ class Logger:
             data = None
         self.dataLock.release() 
         if data:
-            return [float(x) for x in data]
-        else:
-            return None
+            try:
+                return [float(x) for x in data]
+            except Exception as e:
+                print e
+        return None
 
     def getForceSensors(self):
         self.dataLock.acquire()
@@ -458,7 +463,11 @@ class Logger:
             data = None
         self.dataLock.release()
         if data:
-            return [float(x) for x in data]
+            try:
+                return [float(x) for x in data]
+            except Exception as e:
+                print e
+        return None
 
     def getNet(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -473,9 +482,12 @@ class Logger:
             a = str(data).split(' ')
             if self.verbose: print a
             self.dataLock.acquire()
-            if a[1] == '0':   self.cartesian.appendleft([a[2:5], a[5:]])
-            elif a[1] == '1': self.joints.appendleft([a[2:5], a[5:]])
-            elif a[1] == '2': self.forceTorque.appendleft(a[2:5], a[5:])
+            try:
+                if a[1] == '0':   self.cartesian.appendleft([a[2:5], a[5:]])
+                elif a[1] == '1': self.joints.appendleft([a[2:5], a[5:]])
+                elif a[1] == '2': self.forceTorque.appendleft([a[2:5], a[5:]])
+            except Exception as e:
+                print e
             self.dataLock.release()
         #supposedly not necessary but the robot gets mad if you don't do this
         s.shutdown(socket.SHUT_RDWR)
