@@ -433,7 +433,7 @@ class Logger:
             data = None
         self.dataLock.release() 
         if data:
-            return [float(x) for x in data[0:3], float(x) for x in data[3:7]]
+            return [[float(x) for x in data[0:3]],[float(x) for x in data[3:7]]]
         else:
             return None
 
@@ -445,7 +445,7 @@ class Logger:
             data = None
         self.dataLock.release() 
         if data:
-            return float(x) for x in data
+            return [float(x) for x in data]
         else:
             return None
 
