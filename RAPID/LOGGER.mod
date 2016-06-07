@@ -16,8 +16,8 @@ VAR speeddata currentSpeed;
 VAR zonedata currentZone;
 
 !//Logger sampling rate
-!PERS num loggerWaitTime:= 0.01;  !Recommended for real controller
-PERS num loggerWaitTime:= 0.1;    !Recommended for virtual controller
+PERS num loggerWaitTime:= 0.01;  !Recommended for real controller
+!PERS num loggerWaitTime:= 0.1;    !Recommended for virtual controller
 
 PROC ServerCreateAndConnect(string ip, num port)
 	VAR string clientIP;
@@ -48,6 +48,21 @@ PROC main()
 	VAR string date;
 	VAR string time;
 	VAR clock timer;
+
+	!//Torque Sensor Definitions
+    TestSignDefine SensorX, 201, ROB_1, 1, 0;
+    TestSignDefine SensorY, 202, ROB_1, 1, 0;
+    TestSignDefine SensorZ, 203, ROB_1, 1, 0;
+    TestSignDefine SensorWX, 204, ROB_1, 1, 0;
+    TestSignDefine SensorWY, 205, ROB_1, 1, 0;
+    TestSignDefine SensorWZ, 206, ROB_1, 1, 0;
+    TestSignDefine ForceX, 207, ROB_1, 1, 0;
+    TestSignDefine ForceY, 208, ROB_1, 1, 0;
+    TestSignDefine ForceZ, 209, ROB_1, 1, 0;
+    TestSignDefine ForceWX, 210, ROB_1, 1, 0;
+    TestSignDefine ForceWY, 211, ROB_1, 1, 0;
+    TestSignDefine ForceWZ, 212, ROB_1, 1, 0;
+
 
 	date:= CDate();
 	time:= CTime();
@@ -89,6 +104,21 @@ PROC main()
 		IF connected = TRUE THEN
 			SocketSend clientSocket \Str:=data;
 		ENDIF
+
+		!Force Torque
+		data := "# 2 ";
+		data := data + date + " " + time + " ";
+		data := data + NumToStr(ClkRead(timer),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorX),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorY),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorZ),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorWX),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorWY),2) + " ";
+		data := data + NumToStr(TestSignRead(SensorWZ),2) + " "; !End of string
+		IF connected = TRUE THEN
+			SocketSend clientSocket \Str:=data;
+		ENDIF
+
 		WaitTime loggerWaitTime;
 	ENDWHILE
 	ERROR

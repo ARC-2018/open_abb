@@ -421,6 +421,7 @@ class Logger:
         self.dataLock = threading.Lock()
         self.joints    = deque(maxlen=maxlen)
         self.cartesian = deque(maxlen=maxlen)
+        self.forceTorque = deque(maxlen=maxlen)
         self.L = threading.Lock()
         self.active = True        
         pn = threading.Thread(target=self.getNet).start()
@@ -449,6 +450,16 @@ class Logger:
         else:
             return None
 
+    def getForceSensors(self):
+        self.dataLock.acquire()
+        if len(self.forceTorque) > 0:
+            data = self.forceTorque[0][1]
+        else:
+            data = None
+        self.dataLock.release()
+        if data:
+            return [float(x) for x in data]
+
     def getNet(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.IP, self.PORT))
@@ -464,6 +475,7 @@ class Logger:
             self.dataLock.acquire()
             if a[1] == '0':   self.cartesian.appendleft([a[2:5], a[5:]])
             elif a[1] == '1': self.joints.appendleft([a[2:5], a[5:]])
+            elif a[1] == '2': self.forceTorque.appendleft(a[2:5], a[5:])
             self.dataLock.release()
         #supposedly not necessary but the robot gets mad if you don't do this
         s.shutdown(socket.SHUT_RDWR)
