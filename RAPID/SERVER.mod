@@ -164,6 +164,7 @@ PROC main()
     VAR bool connected;          !//Client connected
     VAR bool reconnected;        !//Drop and reconnection happened during serving a command
     VAR robtarget cartesianPose;
+    VAR robtarget toPoint;
     VAR jointtarget jointsPose;
     VAR num SensorX:=1;
     VAR num SensorY:=2;
@@ -184,7 +185,12 @@ PROC main()
     ConfL \Off;
     SingArea \Wrist;
     moveCompleted:= TRUE;
-	
+
+    !// Initialize for force control
+    PERS loaddata TestLoad:=[0.001,[0,0,0.001],[1,0,0,0],0,0,0];
+    !// Identify load using the sensor and the current orientation
+    TestLoad:=FCLoadID();
+
     !//Initialization of WorkObject, Tool, Speed and Zone
     Initialize;
 
@@ -570,6 +576,43 @@ PROC main()
             ELSE 
                 ok :=SERVER_BAD_MSG;
             ENDIF
+
+        CASE 48: !Calibrate force sensor at current orientation
+            IF nParams = 0 THEN
+                FCCalib TestLoad;
+                ok :=SERVER_OK;
+            ELSE 
+                ok :=SERVER_BAD_MSG;
+            ENDIF
+
+        CASE 49: !Start pressing on a surface
+            IF nParams = 11 THEN
+                toPoint := [[params{1},params{2},params{3}],
+                                        [params{4},params{5},params{6},params{7}],
+                                        [0,0,0,0],
+                                        externalAxis];
+                ! destination point, speed, Fx y and z, force threshold (integer 0-100), 
+                ! starts at current point, applies force Fx / y / z * force_threshold until equivalent force is
+                ! met. Then moves towards destination point, ramping up to full force.
+                FCPress1LStart toPoint, currentSpeed, \Fx:=params{8}, \Fy:=params{9}, \Fz:=params{10}, params{11}, currentZone, currentTool;
+                ok :=SERVER_OK;
+            ELSE 
+                ok :=SERVER_BAD_MSG;
+            ENDIF
+
+
+        CASE 50: !Stop pressing on surface
+            IF nParams = 7 THEN
+                toPoint := [[params{1},params{2},params{3}],
+                                        [params{4},params{5},params{6},params{7}],
+                                        [0,0,0,0],
+                                        externalAxis];
+                FCPressEnd toPoint, currentSpeed, currentTool;
+                ok :=SERVER_OK;
+            ELSE 
+                ok :=SERVER_BAD_MSG;
+            ENDIF
+
 
             CASE 98: !returns current robot info: serial number, robotware version, and robot type
                 IF nParams = 0 THEN
