@@ -357,13 +357,26 @@ class Robot:
         self.commslock.release()
         return data
 
-    #execute every move in joint pos buffer with ft canceling
-    def executeJointPosBufferWithFT(self):
+    # set
+    def setJointPosBufferFTSetpoint(self):
         msg = "52 #"
         self.commslock.acquire()
         self.robsock.send(msg)
         data = self.robsock.recv(self.BUFLEN)
         self.commslock.release()
+        if self.verbose:
+            print "setJointPosBufferFTSetpoint:", msg
+        return data
+
+    #execute every move in joint pos buffer with ft canceling
+    def executeJointPosBufferWithFT(self):
+        msg = "53 #"
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        if self.verbose:
+            print "executing JointposBufferwithFT:", msg
         return data
 
     def checkCoordinates(self, coords):

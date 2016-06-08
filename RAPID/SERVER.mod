@@ -185,6 +185,8 @@ PROC main()
     VAR num ftThreshY; 
     VAR num ftThreshZ; 
     
+    VAR num i;
+    
     VAR loaddata TestLoad:=[3.0,[0,0,0.015],[1,0,0,0],0,0,0];
 
     !//Motion configuration
@@ -472,8 +474,8 @@ PROC main()
             jointsTarget := [[params{1},params{2},params{3},params{4},params{5},params{6}],externalAxis];
             IF BUFFER_JOINT_POS < MAX_BUFFER THEN
                 BUFFER_JOINT_POS := BUFFER_JOINT_POS + 1;
-            bufferJointPos{BUFFER_JOINT_POS} :=jointsTarget;
-            bufferJointSpeeds{BUFFER_JOINT_POS} := currentSpeed;
+                bufferJointPos{BUFFER_JOINT_POS} :=jointsTarget;
+                bufferJointSpeeds{BUFFER_JOINT_POS} := currentSpeed;
             ENDIF
             ok := SERVER_OK;
         ELSE
@@ -552,7 +554,7 @@ PROC main()
                     MoveAbsJ bufferJointTimePos{1}, currentSpeed, currentZone, currentTool, \Wobj:=currentWobj;
                     IF BUFFER_JOINT_TIME_POS > 1 THEN
                     FOR i FROM 2 TO (BUFFER_JOINT_TIME_POS) DO
-                        MoveAbsJ bufferJointTimePos{i}, currentSpeed\T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
+                        MoveAbsJ bufferJointTimePos{i}, currentSpeed, \T:=bufferJointTimes{i}, currentZone, currentTool, \Wobj:=currentWobj;
                     ENDFOR
                     ENDIF
                 ENDIF
@@ -624,7 +626,20 @@ PROC main()
                 ok :=SERVER_BAD_MSG;
             ENDIF
 
-        CASE 52: !Execute moves in bufferJointPos, querying forcetorque between steps and
+        CASE 52: ! Save FT for buffer
+            IF nParams = 0 THEN
+                startFT{1} := TestSignRead(SensorX);
+                startFT{2} := TestSignRead(SensorY);
+                startFT{3} := TestSignRead(SensorZ);
+                startFT{4} := TestSignRead(SensorWX);
+                startFT{5} := TestSignRead(SensorWY);
+                startFT{6} := TestSignRead(SensorWZ);
+                ok :=SERVER_OK;
+            ELSE
+                ok :=SERVER_BAD_MSG;
+            ENDIF
+
+        CASE 53: !Execute moves in bufferJointPos, querying forcetorque between steps and
                  ! stopping if it exceeds a threshold
             IF nParams = 0 THEN
                 IF BUFFER_JOINT_POS > 0 THEN
@@ -632,20 +647,16 @@ PROC main()
                     ftThreshX := 5;
                     ftThreshY := 5;
                     ftThreshZ := 5;
-                    startFT{1} = TestSignRead(SensorX)
-                    startFT{2} = TestSignRead(SensorY)
-                    startFT{3} = TestSignRead(SensorZ)
-                    startFT{4} = TestSignRead(SensorWX)
-                    startFT{5} = TestSignRead(SensorWY)
-                    startFT{6} = TestSignRead(SensorWZ)
-                    WHILE keepGoing = 1 DO
+                    i := 1;
+                    
+                    WHILE i <= BUFFER_JOINT_POS AND keepGoing = 1 DO
                         IF TestSignRead(SensorX) > startFT{1} + ftThreshX OR
                            TestSignRead(SensorX) < startFT{1} - ftThreshX OR
                            TestSignRead(SensorY) > startFT{2} + ftThreshY OR
                            TestSignRead(SensorY) < startFT{2} - ftThreshY OR
                            TestSignRead(SensorZ) > startFT{3} + ftThreshZ OR
                            TestSignRead(SensorZ) < startFT{3} - ftThreshZ THEN
-                           keepGoing = 0
+                           keepGoing := 0;
                         ELSE
                             MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
                             i := i + 1;
