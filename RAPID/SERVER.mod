@@ -34,7 +34,7 @@ VAR jointtarget jointsTarget;
 VAR bool moveCompleted; !Set to true after finishing a Move instruction.
 
 !//Buffered move variables
-CONST num MAX_BUFFER := 512;
+CONST num MAX_BUFFER := 2048;
 VAR num BUFFER_POS := 0;
 VAR num BUFFER_JOINT_POS :=0;
 VAR num BUFFER_JOINT_TIME_POS :=0;
