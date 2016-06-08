@@ -177,6 +177,9 @@ PROC main()
     VAR num ForceWX:=10;
     VAR num ForceWY:=11;
     VAR num ForceWZ:=12;
+
+    VAR num startFT{6};
+
     !//Motion configuration
     ConfL \Off;
     SingArea \Wrist;
@@ -550,6 +553,26 @@ PROC main()
 		    ELSE
 		        ok :=SERVER_BAD_MSG;
 		    ENDIF
+
+
+        CASE 46: !Activate soft servo
+            IF nParams = 3 THEN
+                axis = params{1}
+                softness = params{2}
+                ramp = params{3}
+                SoftAct axis, softness, \Ramp:=ramp;
+                ok :=SERVER_OK;
+            ELSE 
+                ok :=SERVER_BAD_MSG;
+            ENDIF
+
+        CASE 47: !Deactivate soft servo
+            IF nParams = 0 THEN
+                SoftDeact;
+                ok :=SERVER_OK;
+            ELSE 
+                ok :=SERVER_BAD_MSG;
+            ENDIF
 
             CASE 98: !returns current robot info: serial number, robotware version, and robot type
                 IF nParams = 0 THEN

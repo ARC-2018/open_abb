@@ -380,6 +380,28 @@ class Robot:
         else:
             return False
 
+    def setSoft(self,axis,softness,ramp):
+        msg = "46 "
+        msg = msg + format(axis,"+01d")+" "+ format(softness,"+08.2f")+" "+ format(ramp,"+08.2f") + " #"
+        if self.verbose: print 'setSoft:',msg
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        time.sleep(self.idel)
+        return data
+
+    def clearSoft(self):
+        msg = "47 #"
+        if self.verbose: print 'clearSoft:',msg
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        time.sleep(self.idel)
+        return data
+
+
     def clearJointPosTimeBuffer(self):
         msg = "43 #"
         self.commslock.acquire()
