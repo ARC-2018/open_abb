@@ -380,9 +380,10 @@ class Robot:
         else:
             return False
 
-    def setSoft(self,axis,softness,ramp):
+    def setSoft(self,axis,softness):
+        # sets softness in joint axis # (1-indexed), softness 0-100 as an integer
         msg = "46 "
-        msg = msg + format(axis,"+01d")+" "+ format(softness,"+08.2f")+" "+ format(ramp,"+08.2f") + " #"
+        msg = msg + format(axis,"+01d")+" "+ format(softness,"+03d")+" "+ format(ramp,"+03d") + " #"
         if self.verbose: print 'setSoft:',msg
         self.commslock.acquire()
         self.robsock.send(msg)

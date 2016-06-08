@@ -557,10 +557,7 @@ PROC main()
 
         CASE 46: !Activate soft servo
             IF nParams = 3 THEN
-                axis = params{1}
-                softness = params{2}
-                ramp = params{3}
-                SoftAct axis, softness, \Ramp:=ramp;
+                SoftAct params{1}, params{2};
                 ok :=SERVER_OK;
             ELSE 
                 ok :=SERVER_BAD_MSG;
