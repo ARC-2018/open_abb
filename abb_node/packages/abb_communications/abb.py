@@ -402,39 +402,64 @@ class Robot:
         time.sleep(self.idel)
         return data
 
+    def doPressMassCalib(self):
+        msg = "51 #"
+        if self.verbose: print 'doPressMassCalib:', msg
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        return data
+
+    def doPressCalib(self):
+        msg = "48 #"
+        if self.verbose: print 'doPressCalib:', msg
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        return data
+
     def startPress(self, pos, fX, fY, fZ, fThresh):
         if len(pos) == 7: pos = [pos[0:3], pos[3:7]]
-            if self.checkCoordinates(pos):
-                msg = "49 " 
-                msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
-                msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
-                msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " "
-                msg = msg + format(fX, "+08.5f") + " " + format(fY, "+08.5f") + " " + format(fZ, "+08.5f") + " "
-                msg = msg + format(fThresh, "+03d") + " #"
+        if self.checkCoordinates(pos):
+            msg = "35 " 
+            msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
+            msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
+            msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"    
+            
+            self.commslock.acquire()
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
 
-                if self.verbose: print 'setPress:', msg
-                self.commslock.acquire()
-                self.robsock.send(msg)
-                data = self.robsock.recv(self.BUFLEN)
-                self.commslock.release()
-                return data
-       return False
+            msg = "49 " 
+            msg = msg + format(fX, "+08.5f") + " " + format(fY, "+08.5f") + " " + format(fZ, "+08.5f") + " "
+            msg = msg + format(fThresh, "+03d") + " #"
+
+            if self.verbose: print 'setPress:', msg
+            self.commslock.acquire()
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
+            return data
+        return False
 
     def endPress(self, pos):
         if len(pos) == 7: pos = [pos[0:3], pos[3:7]]
-            if self.checkCoordinates(pos):
-                msg = "50 " 
-                msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
-                msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
-                msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"
+        if self.checkCoordinates(pos):
+            msg = "50 " 
+            msg = msg + format(pos[0][0], "+08.1f") + " " + format(pos[0][1], "+08.1f") + " " + format(pos[0][2], "+08.1f") + " " 
+            msg = msg + format(pos[1][0], "+08.5f") + " " + format(pos[1][1], "+08.5f") + " " 
+            msg = msg + format(pos[1][2], "+08.5f") + " " + format(pos[1][3], "+08.5f") + " #"
 
-                if self.verbose: print 'stopPress:', msg
-                self.commslock.acquire()
-                self.robsock.send(msg)
-                data = self.robsock.recv(self.BUFLEN)
-                self.commslock.release()
-                return data
-       return False
+            if self.verbose: print 'stopPress:', msg
+            self.commslock.acquire()
+            self.robsock.send(msg)
+            data = self.robsock.recv(self.BUFLEN)
+            self.commslock.release()
+            return data
+        return False
 
     def clearJointPosTimeBuffer(self):
         msg = "43 #"
