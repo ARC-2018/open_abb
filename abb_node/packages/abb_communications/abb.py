@@ -277,6 +277,15 @@ class Robot:
         self.commslock.release()
         return data
 
+    #execute every move in buffer as MoveL with FT canceling
+    def executeBufferWithFT(self):
+        msg = "52 #"
+        self.commslock.acquire()
+        self.robsock.send(msg)
+        data = self.robsock.recv(self.BUFLEN)
+        self.commslock.release()
+        return data
+
     def setExternalAxis(self, axisValues=[-550,0,0,0,0,0]):
         if len(axisValues) == 6:
             msg = "34 " 

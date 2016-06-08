@@ -180,6 +180,10 @@ PROC main()
     VAR num ForceWZ:=12;
 
     VAR num startFT{6};
+    VAR num keepGoing;
+    VAR num ftThreshX; 
+    VAR num ftThreshY; 
+    VAR num ftThreshZ; 
     
     VAR loaddata TestLoad:=[3.0,[0,0,0.015],[1,0,0,0],0,0,0];
 
@@ -620,35 +624,70 @@ PROC main()
                 ok :=SERVER_BAD_MSG;
             ENDIF
 
-            CASE 98: !returns current robot info: serial number, robotware version, and robot type
-                IF nParams = 0 THEN
-                    addString := GetSysInfo(\SerialNo) + "*";
-                    addString := addString + GetSysInfo(\SWVersion) + "*";
-                    addString := addString + GetSysInfo(\RobotType);
-                    ok := SERVER_OK;
-                ELSE
+        CASE 52: !Execute moves in bufferJointPos, querying forcetorque between steps and
+                 ! stopping if it exceeds a threshold
+            IF nParams = 0 THEN
+                IF BUFFER_JOINT_POS > 0 THEN
+                    keepGoing := 1;
+                    ftThreshX := 5;
+                    ftThreshY := 5;
+                    ftThreshZ := 5;
+                    startFT{1} = TestSignRead(SensorX)
+                    startFT{2} = TestSignRead(SensorY)
+                    startFT{3} = TestSignRead(SensorZ)
+                    startFT{4} = TestSignRead(SensorWX)
+                    startFT{5} = TestSignRead(SensorWY)
+                    startFT{6} = TestSignRead(SensorWZ)
+                    WHILE keepGoing = 1 DO
+                        IF TestSignRead(SensorX) > startFT{1} + ftThreshX OR
+                           TestSignRead(SensorX) < startFT{1} - ftThreshX OR
+                           TestSignRead(SensorY) > startFT{2} + ftThreshY OR
+                           TestSignRead(SensorY) < startFT{2} - ftThreshY OR
+                           TestSignRead(SensorZ) > startFT{3} + ftThreshZ OR
+                           TestSignRead(SensorZ) < startFT{3} - ftThreshZ THEN
+                           keepGoing = 0
+                        ELSE
+                            MoveAbsJ bufferJointPos{i}, bufferJointSpeeds{i}, currentZone, currentTool, \Wobj:=currentWobj;
+                            i := i + 1;
+                        ENDIF
+                    ENDWHILE
+                ENDIF
+                ok :=SERVER_OK;
+            ELSE
                     ok :=SERVER_BAD_MSG;
-                ENDIF
+            ENDIF
 
-            CASE 99: !Close Connection
-                IF nParams = 0 THEN
-                    TPWrite "SERVER: Client has closed connection.";
-                    connected := FALSE;
-                    !//Closing the server
-                    SocketClose clientSocket;
-                    SocketClose serverSocket;
+        CASE 98: !returns current robot info: serial number, robotware version, and robot type
+            IF nParams = 0 THEN
+                addString := GetSysInfo(\SerialNo) + "*";
+                addString := addString + GetSysInfo(\SWVersion) + "*";
+                addString := addString + GetSysInfo(\RobotType);
+                ok := SERVER_OK;
+            ELSE
+                ok :=SERVER_BAD_MSG;
+            ENDIF
 
-                    !Reinitiate the server
-                    ServerCreateAndConnect ipController,serverPort;
-                    connected := TRUE;
-                    reconnected := TRUE;
-                    ok := SERVER_OK;
-                ELSE
-                    ok := SERVER_BAD_MSG;
-                ENDIF
-            DEFAULT:
-                TPWrite "SERVER: Illegal instruction code";
+        CASE 99: !Close Connection
+            IF nParams = 0 THEN
+                TPWrite "SERVER: Client has closed connection.";
+                connected := FALSE;
+                !//Closing the server
+                SocketClose clientSocket;
+                SocketClose serverSocket;
+
+                !Reinitiate the server
+                ServerCreateAndConnect ipController,serverPort;
+                connected := TRUE;
+                reconnected := TRUE;
+                ok := SERVER_OK;
+            ELSE
                 ok := SERVER_BAD_MSG;
+            ENDIF
+
+        DEFAULT:
+            TPWrite "SERVER: Illegal instruction code";
+            ok := SERVER_BAD_MSG;
+
         ENDTEST
         
         !Compose the acknowledge string to send back to the client
